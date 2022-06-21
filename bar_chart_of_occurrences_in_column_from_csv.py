@@ -6,59 +6,70 @@ import pandas as pd
 import pathlib
 import argparse
 
-class createGraphFromCsvColumn:
+class barChartFromCsvColumn:
     def __init__(self, path, column_name, sep=','):
+        
+        self.column = []
+
         _data_frame = pd.read_csv(path, sep=sep)
-        _column = list(_data_frame.get(column_name))
-        np.array(_column)
+        self.column = list(_data_frame.get(column_name))
+        np.array(self.column)
 
-        _dict_values_counts = {}
-        _values, _counts = np.unique(_column, return_counts=True)
+    def graph_uniq_values(self,count=True, desc=False, graph_name='Uniq values', limit=10, x_name='values', y_name='no.'):
 
-        for key,value in zip(_values, _counts):
-            _dict_values_counts[key] = value 
-        
-        self.sorted_dict_values_counts = sorted(_dict_values_counts.items(), key=lambda x: x[1])
-    
-    def get_repeated_occurrences(self, depth, graph_name, x_name, y_name, desc=False):
-        _iteration=0
-        _list_keys = []
-        _list_values = []
-        
-        # Create dict of $depth records
-        if desc:
-            for key,value in reversed(self.sorted_dict_values_counts):
-                if _iteration < depth:
-                    _list_keys.append(key)
-                    _list_values.append(value)
-                    _iteration += 1
+        if count:
+            _dict_column_name_number_of_occurrences = {}
+            _list_keys = []
+            _list_values = []
+            
+            _column_name, _number_of_occurrences = np.unique(self.column, return_counts=True)
+
+            for _key,_value in zip(_column_name, _number_of_occurrences):
+                _dict_column_name_number_of_occurrences[_key] = _value 
+            
+            self.sorted_list_of_tuples = sorted(_dict_column_name_number_of_occurrences.items(), key=lambda x: x[1])
+            
+            # Create dict of $limit records
+            _iteration=0
+            if desc:
+                for _key,_value in reversed(self.sorted_list_of_tuples):
+                    if _iteration < limit:
+                        _list_keys.append(_key)
+                        _list_values.append(_value)
+                        _iteration += 1
+            else:
+                for _key,_value in self.sorted_dict_column_name_number_of_occurrences:
+                    if _iteration < limit:
+                        _list_keys.append(_key)
+                        _list_values.append(_value)
+                        _iteration += 1
+      
+            _list_tuples = list(zip(_list_keys,_list_values))
+            
+            self.data_frame = pd.DataFrame(_list_tuples, columns=[x_name, y_name])
+            
+            fig = px.bar(
+                data_frame=self.data_frame,
+                x=x_name,
+                y=y_name,
+                color=x_name,
+                color_discrete_sequence=["red", "red", "red", "orange", "orange", "orange", "orange", "orange", "orange", "orange"],
+                hover_name=x_name,
+                hover_data={x_name: True, y_name: True},
+                title=graph_name
+            )
+            return(fig)
         else:
-            for key,value in self.sorted_dict_values_counts:
-                if _iteration < depth:
-                    _list_keys.append(key)
-                    _list_values.append(value)
-                    _iteration += 1
-
-        _list_tuples = list(zip(_list_keys,_list_values))
-        
-        df = pd.DataFrame(_list_tuples, columns=[x_name, y_name])
-        
-        fig = px.bar(
-            data_frame=df,
-            x=x_name,
-            y=y_name,
-            color=x_name,
-            color_discrete_sequence=["red", "red", "red", "orange", "orange", "orange", "orange", "orange", "orange", "orange"],
-            hover_name=x_name,
-            hover_data={x_name: True, y_name: False},
-            title=graph_name
-        )
-        
-        return(fig)
+            _column_name = np.unique(self.column)
 
 def main():
-    data = createGraphFromCsvColumn(args.csv_data, args.column)
-    graph = data.get_repeated_occurrences(args.depth, args.graph_name, args.x_name, args.y_name, desc=True)
+    bar_chart = barChartFromCsvColumn(args.csv_data, args.column)
+
+    graph = bar_chart.graph_uniq_values(
+        graph_name=args.graph_name, 
+        limit=args.limit, 
+        x_name=args.x_name, 
+        y_name=args.y_name, desc=True)
     
     if args.create_html:
       graph.write_html(str(args.graph_name) + '.html')  
@@ -87,12 +98,12 @@ if __name__ == "__main__":
                         action='store',
                         dest='csv_data',
                         help='''Path to CSV data file''')
-    parser.add_argument('-d',
-                        '--depth',
+    parser.add_argument('-l',
+                        '--limit',
                         type=int,
                         action='store',
                         default= 5,
-                        dest='depth',
+                        dest='limit',
                         help='''Number of records to graph (number of bars in graph)''')
     parser.add_argument('-name',
                         '--name_of_graph',
